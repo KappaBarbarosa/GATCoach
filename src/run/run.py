@@ -17,6 +17,8 @@ from components.transforms import OneHot
 
 from smac.env import StarCraft2Env
 
+import wandb
+
 def get_agent_own_state_size(env_args):
     sc_env = StarCraft2Env(**env_args)
     # qatten parameter setting (only use in qatten)
@@ -46,13 +48,22 @@ def run(_run, _config, _log):
         tb_logs_direc = os.path.join(dirname(dirname(dirname(abspath(__file__)))), "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
         logger.setup_tb(tb_exp_direc)
+        if args.use_wandb:
+            wandb.tensorboard.patch(root_logdir=tb_logs_direc)
+            wandb.init(
+            # set the wandb project where this run will be logged
+            entity="llmcommander2024",
+            project="Coach",
+            name=unique_token,
+            config=_config
+            )
 
     # sacred is on by default
     logger.setup_sacred(_run)
 
     # Run and train
     run_sequential(args=args, logger=logger)
-
+    wandb.finish()
     # Clean up after finishing
     print("Exiting Main")
 
@@ -117,11 +128,18 @@ def run_sequential(args, logger):
     # Setup multiagent controller here
     mac = mac_REGISTRY[args.mac](buffer.scheme, groups, args)
 
-    # Give runner the scheme
-    runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, mac=mac)
 
     # Learner
     learner = le_REGISTRY[args.learner](mac, buffer.scheme, logger, args)
+
+    # Give runner the scheme
+
+    if args.has_coach:
+        runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, mac=mac,coach=learner.coach)
+    else:
+        runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, mac=mac)
+
+    
 
     if args.use_cuda:
         learner.cuda()

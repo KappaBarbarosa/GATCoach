@@ -43,13 +43,14 @@ class ParallelRunner:
 
         self.log_train_stats_t = -100000
 
-    def setup(self, scheme, groups, preprocess, mac):
+    def setup(self, scheme, groups, preprocess, mac, coach = None):
         self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
                                  preprocess=preprocess, device=self.args.device)
         self.mac = mac
         self.scheme = scheme
         self.groups = groups
         self.preprocess = preprocess
+        self.coach = coach
 
     def get_env_info(self):
         return self.env_info
@@ -98,7 +99,9 @@ class ParallelRunner:
         
         save_probs = getattr(self.args, "save_probs", False)
         while True:
-
+            if self.args.has_coach and self.t % self.args.coach_update_freq == 0:
+                z_team, _, _  = self.coach(self.batch,self.t)
+                self.mac.agent.set_team_strategy(z_team)
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
             if save_probs:

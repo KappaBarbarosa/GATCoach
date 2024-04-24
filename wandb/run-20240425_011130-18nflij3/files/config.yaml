@@ -1,0 +1,242 @@
+wandb_version: 1
+
+runner:
+  desc: null
+  value: parallel
+mac:
+  desc: null
+  value: n_mac
+env:
+  desc: null
+  value: sc2
+env_args:
+  desc: null
+  value:
+    continuing_episode: false
+    difficulty: '7'
+    game_version: null
+    map_name: corridor
+    move_amount: 2
+    obs_all_health: true
+    obs_instead_of_state: false
+    obs_last_action: false
+    obs_own_health: true
+    obs_pathing_grid: false
+    obs_terrain_height: false
+    obs_timestep_number: false
+    reward_death_value: 10
+    reward_defeat: 0
+    reward_negative_scale: 0.5
+    reward_only_positive: true
+    reward_scale: true
+    reward_scale_rate: 20
+    reward_sparse: false
+    reward_win: 200
+    replay_dir: ''
+    replay_prefix: ''
+    state_last_action: true
+    state_timestep_number: false
+    step_mul: 8
+    seed: 221874097
+    heuristic_ai: false
+    heuristic_rest: false
+    debug: false
+batch_size_run:
+  desc: null
+  value: 8
+test_nepisode:
+  desc: null
+  value: 32
+test_interval:
+  desc: null
+  value: 10000
+test_greedy:
+  desc: null
+  value: true
+log_interval:
+  desc: null
+  value: 10000
+runner_log_interval:
+  desc: null
+  value: 10000
+learner_log_interval:
+  desc: null
+  value: 10000
+t_max:
+  desc: null
+  value: 10050000
+use_cuda:
+  desc: null
+  value: true
+buffer_cpu_only:
+  desc: null
+  value: true
+use_tensorboard:
+  desc: null
+  value: true
+use_wandb:
+  desc: null
+  value: true
+save_model:
+  desc: null
+  value: false
+save_model_interval:
+  desc: null
+  value: 2000000
+checkpoint_path:
+  desc: null
+  value: ''
+evaluate:
+  desc: null
+  value: false
+load_step:
+  desc: null
+  value: 0
+save_replay:
+  desc: null
+  value: false
+local_results_path:
+  desc: null
+  value: results
+gamma:
+  desc: null
+  value: 0.99
+batch_size:
+  desc: null
+  value: 128
+buffer_size:
+  desc: null
+  value: 5000
+lr:
+  desc: null
+  value: 0.001
+critic_lr:
+  desc: null
+  value: 0.0005
+optim_alpha:
+  desc: null
+  value: 0.99
+optim_eps:
+  desc: null
+  value: 1.0e-05
+grad_norm_clip:
+  desc: null
+  value: 10
+agent:
+  desc: null
+  value: n_rnn
+rnn_hidden_dim:
+  desc: null
+  value: 64
+obs_agent_id:
+  desc: null
+  value: true
+obs_last_action:
+  desc: null
+  value: true
+repeat_id:
+  desc: null
+  value: 1
+label:
+  desc: null
+  value: default_label
+run:
+  desc: null
+  value: default
+has_coach:
+  desc: null
+  value: false
+action_selector:
+  desc: null
+  value: epsilon_greedy
+epsilon_start:
+  desc: null
+  value: 1.0
+epsilon_finish:
+  desc: null
+  value: 0.05
+epsilon_anneal_time:
+  desc: null
+  value: 100000
+optimizer:
+  desc: null
+  value: adam
+target_update_interval:
+  desc: null
+  value: 200
+agent_output_type:
+  desc: null
+  value: q
+learner:
+  desc: null
+  value: nq_learner
+mixer:
+  desc: null
+  value: qmix
+mixing_embed_dim:
+  desc: null
+  value: 32
+hypernet_embed:
+  desc: null
+  value: 64
+td_lambda:
+  desc: null
+  value: 0.6
+q_lambda:
+  desc: null
+  value: false
+use_layer_norm:
+  desc: null
+  value: false
+use_orthogonal:
+  desc: null
+  value: false
+gain:
+  desc: null
+  value: 0.01
+use_per:
+  desc: null
+  value: false
+per_alpha:
+  desc: null
+  value: 0.6
+per_beta:
+  desc: null
+  value: 0.4
+return_priority:
+  desc: null
+  value: false
+name:
+  desc: null
+  value: qmix_env=8_adam_td_lambda
+seed:
+  desc: null
+  value: 221874097
+_wandb:
+  desc: null
+  value:
+    python_version: 3.8.19
+    cli_version: 0.16.6
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1713978690.0
+    t:
+      1:
+      - 1
+      - 52
+      - 55
+      2:
+      - 1
+      - 52
+      - 55
+      3:
+      - 13
+      - 16
+      - 23
+      - 34
+      4: 3.8.19
+      5: 0.16.6
+      8:
+      - 5
+      13: linux-x86_64

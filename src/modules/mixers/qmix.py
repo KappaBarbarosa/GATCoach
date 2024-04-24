@@ -10,7 +10,7 @@ class QMixer(nn.Module):
 
         self.args = args
         self.n_agents = args.n_agents
-        self.state_dim = int(np.prod(args.state_shape))
+        self.state_dim = args.coach_h_dim if args.has_coach else int(np.prod(args.state_shape)) 
 
         self.embed_dim = args.mixing_embed_dim
         self.abs = getattr(self.args, 'abs', True)
@@ -56,6 +56,30 @@ class QMixer(nn.Module):
         w_final = w_final.view(-1, self.embed_dim, 1)
         # State-dependent bias
         v = self.V(states).view(-1, 1, 1)
+        # Compute final output
+        y = th.bmm(hidden, w_final) + v
+        # Reshape and return
+        q_tot = y.view(bs, -1, 1)
+        
+        return q_tot
+    
+
+    def coach_forward(self, agent_qs,coach_h, states):
+        bs = agent_qs.size(0)
+        coach_h = coach_h.reshape(-1, self.state_dim)
+        agent_qs = agent_qs.reshape(-1, 1, self.n_agents)
+        # First layer
+        w1 = self.hyper_w_1(coach_h).abs() if self.abs else self.hyper_w_1(coach_h)
+        b1 = self.hyper_b_1(coach_h)
+        w1 = w1.view(-1, self.n_agents, self.embed_dim)
+        b1 = b1.view(-1, 1, self.embed_dim)
+        hidden = F.elu(th.bmm(agent_qs, w1) + b1)
+        
+        # Second layer
+        w_final = self.hyper_w_final(coach_h).abs() if self.abs else self.hyper_w_final(coach_h)
+        w_final = w_final.view(-1, self.embed_dim, 1)
+        # State-dependent bias
+        v = self.V(coach_h).view(-1, 1, 1)
         # Compute final output
         y = th.bmm(hidden, w_final) + v
         # Reshape and return

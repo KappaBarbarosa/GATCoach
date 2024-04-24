@@ -12,15 +12,17 @@ class Mixer(nn.Module):
         self.args = args
         self.n_agents = args.n_agents
         self.embed_dim = args.mixing_embed_dim
-        self.input_dim = self.state_dim = int(np.prod(args.state_shape)) 
-
+        self.input_dim = self.state_dim =  args.n_agents*args.coach_hidden_dim if args.has_coach else int(np.prod(args.state_shape))
+        w1_input_dim =  args.coach_hidden_dim if args.has_coach else int(np.prod(args.state_shape))
+        w1_output_dim = self.embed_dim if args.has_coach else args.n_agents*self.embed_dim
+    
         self.abs = abs # monotonicity constraint
         self.qmix_pos_func = getattr(self.args, "qmix_pos_func", "abs")
         
         # hyper w1 b1
-        self.hyper_w1 = nn.Sequential(nn.Linear(self.input_dim, args.hypernet_embed),
+        self.hyper_w1 = nn.Sequential(nn.Linear(w1_input_dim, args.hypernet_embed),
                                         nn.ReLU(inplace=True),
-                                        nn.Linear(args.hypernet_embed, self.n_agents * self.embed_dim))
+                                        nn.Linear(args.hypernet_embed, w1_output_dim))
         self.hyper_b1 = nn.Sequential(nn.Linear(self.input_dim, self.embed_dim))
         
         # hyper w2 b2
@@ -50,6 +52,30 @@ class Mixer(nn.Module):
         w2 = self.hyper_w2(states).view(-1, self.embed_dim, 1) # b * t, emb, 1
         b2= self.hyper_b2(states).view(-1, 1, 1)
         
+        if self.abs:
+            w1 = self.pos_func(w1)
+            w2 = self.pos_func(w2)
+            
+        # Forward
+        hidden = F.elu(th.matmul(qvals, w1) + b1) # b * t, 1, emb
+        y = th.matmul(hidden, w2) + b2 # b * t, 1, 1
+        
+        return y.view(b, t, -1)
+    
+    def coach_forward(self, qvals,coach_h, states):
+        # reshape
+        b, t, _ = qvals.size()
+        
+        qvals = qvals.reshape(b * t, 1, self.n_agents)
+
+        # First layer
+        w1 = self.hyper_w1(coach_h).view(-1, self.n_agents, self.embed_dim) # b * t, n_agents, emb
+        coach_h = coach_h.reshape(-1, self.input_dim)
+        b1 = self.hyper_b1(coach_h).view(-1, 1, self.embed_dim)
+        
+        # Second layer
+        w2 = self.hyper_w2(coach_h).view(-1, self.embed_dim, 1) # b * t, emb, 1
+        b2= self.hyper_b2(coach_h).view(-1, 1, 1)
         if self.abs:
             w1 = self.pos_func(w1)
             w2 = self.pos_func(w2)
