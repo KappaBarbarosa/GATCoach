@@ -5,6 +5,8 @@ Source Code for Graph Attention Network with Coach-Player Multi-Agent Reinforcem
 This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 
 **StarCraft 2 version: SC2.4.10. difficulty: 7.**
+
+
 ![alt text](image.png)
 
 ## GAT 
@@ -24,14 +26,15 @@ This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 ![alt text](img1/image.png)
 ### 8m vs 9m
 ![alt text](img1/image-1.png)
-## Installation instructions
+
 
 ## Conclusion
 * Full observable baseline is too strong​
 * GAT-base methods have the potential to catch up with it.​
 * In the environment with more agents, coach-base methods did not perform well​
 * There are still many areas worth exploring
-
+* 
+## Installation instructions
 Install Python packages
 
 ```shell
@@ -87,7 +90,7 @@ They are all located in `src/config`.
 
 # bash run.sh config_name env_config_name map_name_list (arg_list threads_num gpu_list experinments_num)
 
-bashrun.shqmixsc26h_vs_8zepsilon_anneal_time=500000,td_lambda=0.3205
+bash run.sh qmix sc2 6h_vs_8z epsilon_anneal_time=500000,td_lambda=0.3205
 
 ```
 
