@@ -88,7 +88,7 @@ They are all located in `src/config`.
 
 # bash run.sh config_name env_config_name map_name_list (arg_list threads_num gpu_list experinments_num)
 
-bashrun.shqmixsc26h_vs_8zepsilon_anneal_time=500000,td_lambda=0.3205
+bash run.sh qmix sc2 6h_vs_8z epsilon_anneal_time=500000,td_lambda=0.3205
 
 ```
 
