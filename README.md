@@ -22,14 +22,15 @@ This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 ![alt text](img1/image.png)
 ### 8m vs 9m
 ![alt text](img1/image-1.png)
-## Installation instructions
+
 
 ## Conclusion
 * Full observable baseline is too strong​
 * GAT-base methods have the potential to catch up with it.​
 * In the environment with more agents, coach-base methods did not perform well​
 * There are still many areas worth exploring
-
+* 
+## Installation instructions
 Install Python packages
 
 ```shell
