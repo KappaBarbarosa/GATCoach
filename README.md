@@ -5,6 +5,8 @@ Source Code for Graph Attention Network with Coach-Player Multi-Agent Reinforcem
 This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 
 **StarCraft 2 version: SC2.4.10. difficulty: 7.**
+
+
 ![alt text](image.png)
 
 ## GAT 
