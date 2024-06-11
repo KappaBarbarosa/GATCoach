@@ -8,7 +8,9 @@ This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 ![alt text](image.png)
 
 ## GAT 
-
+* Disassemble the full view state and generate the fullt-connected graph, where each node are entities
+* process the GATv2 to get the embedding weight, and mutiply with the strategy embeddings
+* pass the calculated mixed strategy to coach 
 ## Coach
 * Derive from [COPA](https://github.com/Cranial-XIX/marl-copa)
 * Remove the attention layer in agents
