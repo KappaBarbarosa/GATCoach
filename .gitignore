@@ -6,3 +6,5 @@ results/
 *.zip
 .DS_Store
 /wandb/
+visualize/
+embeddings/
