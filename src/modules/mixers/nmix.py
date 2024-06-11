@@ -12,9 +12,10 @@ class Mixer(nn.Module):
         self.args = args
         self.n_agents = args.n_agents
         self.embed_dim = args.mixing_embed_dim
-        self.input_dim = self.state_dim =  args.n_agents*args.coach_hidden_dim if args.has_coach else int(np.prod(args.state_shape))
-        w1_input_dim =  args.coach_hidden_dim if args.has_coach else int(np.prod(args.state_shape))
-        w1_output_dim = self.embed_dim if args.has_coach else args.n_agents*self.embed_dim
+        has_coach = False
+        self.input_dim = self.state_dim =  args.n_agents*args.coach_hidden_dim if has_coach else int(np.prod(args.state_shape))
+        w1_input_dim =  args.coach_hidden_dim if has_coach else int(np.prod(args.state_shape))
+        w1_output_dim = self.embed_dim if has_coach else args.n_agents*self.embed_dim
     
         self.abs = abs # monotonicity constraint
         self.qmix_pos_func = getattr(self.args, "qmix_pos_func", "abs")

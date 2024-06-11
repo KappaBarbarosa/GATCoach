@@ -2,7 +2,7 @@ from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
 import numpy as np
-
+import wandb
 
 class EpisodeRunner:
 
@@ -51,7 +51,8 @@ class EpisodeRunner:
         terminated = False
         episode_return = 0
         self.mac.init_hidden(batch_size=self.batch_size)
-
+        if self.args.has_coach and self.args.coach == "rnn":
+            self.coach.init_hidden(batch_size=self.batch_size)
         while not terminated:
 
             pre_transition_data = {
@@ -61,7 +62,10 @@ class EpisodeRunner:
             }
 
             self.batch.update(pre_transition_data, ts=self.t)
-
+            
+            if self.args.has_coach and (self.t % self.args.coach_update_freq == 0):
+                z_team, _, _  = self.coach(self.batch,self.t)
+                self.mac.agent.set_team_strategy(z_team)
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
@@ -124,4 +128,6 @@ class EpisodeRunner:
         for k, v in stats.items():
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean" , v/stats["n_episodes"], self.t_env)
+                if  "battle_won" in (prefix + k):
+                    wandb.log({prefix + k + "_mean": v/stats["n_episodes"]}, step=self.t_env)
         stats.clear()

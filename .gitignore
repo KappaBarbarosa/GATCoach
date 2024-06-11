@@ -5,3 +5,6 @@ results/
 *.png
 *.zip
 .DS_Store
+/wandb/
+visualize/
+embeddings/

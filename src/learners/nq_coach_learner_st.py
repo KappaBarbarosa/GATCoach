@@ -8,13 +8,12 @@ from utils.rl_utils import build_td_lambda_targets, build_q_lambda_targets
 import torch as th
 import torch.distributions as D
 from torch.optim import RMSprop, Adam
-from modules.coachs.coach import VI
+from modules.coachs.coach_MultiStrategy import KL_Loss, VI
 from modules.coachs import REGISTRY 
 import numpy as np
 from utils.th_utils import get_parameters_num
 import wandb
-import os
-class NQ_Coach_Learner:
+class NQ_Coach_Learner_ST:
     def __init__(self, mac, scheme, logger, args):
         self.args = args
         self.mac = mac
@@ -83,6 +82,8 @@ class NQ_Coach_Learner:
         strategies = []
         means = []
         variances = []
+        mix_means= []
+        mix_variances = []
 
 
 
@@ -91,20 +92,24 @@ class NQ_Coach_Learner:
             self.coach.init_hidden(batch.batch_size)
         for t in range(batch.max_seq_length):
             if t % self.args.coach_update_freq == 0:
-                z,m,v = self.coach(batch,t=t)
+                z,mm,mv,m,v = self.coach(batch,t=t)
                 self.mac.agent.set_team_strategy(z)
                 strategies.append(z)
                 means.append(m)
                 variances.append(v)
+                mix_means.append(m)
+                mix_variances.append(v)
             agent_outs = self.mac.forward(batch, t=t)
             mac_out.append(agent_outs)
 
             # coach_h = self.coach.encode(batch,t=t)
             # coach_out.append(coach_h)
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
-        strategies = th.stack(strategies, dim=1)  
+        strategies = th.stack(strategies, dim=1) 
         means = th.stack(means, dim=1)  
         variances = th.stack(variances, dim=1)  
+        mix_means = th.stack(mix_means, dim=1) 
+        mix_variances = th.stack(mix_variances, dim=1)  
         # coach_out = th.stack(coach_out, dim=1)[:, :-1]
         # Pick the Q-Values for the actions taken by each agent
         chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
@@ -118,7 +123,7 @@ class NQ_Coach_Learner:
             self.target_mac.init_hidden(batch.batch_size)
             for t in range(batch.max_seq_length):
                 if t % self.args.coach_update_freq == 0:
-                    z,_,_ = self.coach(batch,t=t)
+                    z,_,_,_,_ = self.coach(batch,t=t)
                     self.target_mac.agent.set_team_strategy(z)
                 target_agent_outs = self.target_mac.forward(batch, t=t)
                 target_mac_out.append(target_agent_outs)
@@ -167,6 +172,7 @@ class NQ_Coach_Learner:
 
         loss = L_td = masked_td_error.sum() / mask.sum()
         
+        # kl_loss = KL_Loss(mix_means, mix_variances)
         ###############################################
         # embedding coach
         diversity_loss = 0.
@@ -181,14 +187,7 @@ class NQ_Coach_Learner:
         
         if self.args.coach == "embedding":
             self.coach.update_embeddings()
-            
-        if self.args.coach == "embedding":
-            store_path = 'visuialize/embeddings/{}/'.format(self.args.name)
-            if not os.path.exists(store_path):
-                os.makedirs(store_path)
-            self.coach.save_embeddings(store_path, f'embeddings_iter_{t_env}.pt')
-
-              
+        
         grad_norm = th.nn.utils.clip_grad_norm_(self.params, self.args.grad_norm_clip)
         self.optimiser.step()
         if (episode_num - self.last_target_update_episode) / self.args.target_update_interval >= 1.0:
@@ -211,6 +210,8 @@ class NQ_Coach_Learner:
                 self.logger.log_stat("target_mean", target_mean, t_env)
                 wandb.log({"target_mean": target_mean}, step=t_env)
                 self.log_stats_t = t_env
+                # self.logger.log_stat("kl_loss", kl_loss.item(), t_env)
+                # wandb.log({"kl_loss": kl_loss.item()}, step=t_env)
                 if self.args.coach == "embedding":
                     self.logger.log_stat("diversity_loss", diversity_loss.item(), t_env)
                     wandb.log({"diversity_loss": diversity_loss.item()}, step=t_env)
