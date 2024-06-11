@@ -1,13 +1,11 @@
 # GATCoach
 
-Source Code for Graph Attention Network with Coach-Player
-
-Multi-Agent Reinforcement Learning, a final project for Deep Reinforcement Learning 2024 in NTHU.
+Source Code for Graph Attention Network with Coach-Player Multi-Agent Reinforcement Learning, a final project for Deep Reinforcement Learning 2024 in NTHU.
 
 This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 
 **StarCraft 2 version: SC2.4.10. difficulty: 7.**
-
+![alt text](image.png)
 
 ## GAT 
 
@@ -25,6 +23,12 @@ This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 ### 8m vs 9m
 ![alt text](img1/image-1.png)
 ## Installation instructions
+
+## Conclusion
+* Full observable baseline is too strong​
+* GAT-base methods have the potential to catch up with it.​
+* In the environment with more agents, coach-base methods did not perform well​
+* There are still many areas worth exploring
 
 Install Python packages
 
