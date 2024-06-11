@@ -2,7 +2,6 @@
 __MACOSX/
 __pycache__/
 results/
-*.png
 *.zip
 .DS_Store
 /wandb/
