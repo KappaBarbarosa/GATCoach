@@ -6,12 +6,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from modules.layer.self_atten import SelfAttention
+def kl_divergence(mu1, logvar1, mu2, logvar2):
+    return 0.5 * (logvar2 - logvar1 + (torch.exp(logvar1) + (mu1 - mu2)**2) / torch.exp(logvar2) - 1)
 
-class Coach(nn.Module):
+def KL_Loss(mu,logvar):
+    kl_divs = []
+    ds = mu.shape[2]
+    for i in range(ds):
+        for j in range(i+1, ds):
+            mu1, logvar1 = mu[:, :, i, :], logvar[:, :, i, :]
+            mu2, logvar2 = mu[:, :, j, :], logvar[:, :, j, :]
+            kl_div = kl_divergence(mu1, logvar1, mu2, logvar2)
+            kl_divs.append(kl_div)
+    kl_divs = torch.cat(kl_divs, dim=-1)
+    return -kl_divs.mean()
+
+class MultiStrategyCoach(nn.Module):
     def __init__(self, args):
-        super(Coach, self).__init__()
+        super(MultiStrategyCoach, self).__init__()
         self.args = args
-        self.state_dim = int(np.prod(args.state_shape)) if (self.args.coach_input == "state") else int(np.prod(args.obs_shape))*args.n_agents
+        self.state_dim = int(np.prod(args.state_shape)) 
         dh = args.coach_hidden_dim
         self.ds = args.n_strategy
         self.na = args.n_agents
@@ -22,63 +36,59 @@ class Coach(nn.Module):
         self.fc2 = nn.Linear(args.att_heads *  args.att_embed_dim, dh)
 
         # policy for continouos team strategy
+        self.shared_layer = nn.Linear(dh, dh)
         self.mean = nn.Linear(dh, dh * self.ds)
         self.logvar = nn.Linear(dh, dh * self.ds)
         self.weights = nn.Linear(dh, self.ds)
+        self.dh = dh
 
     def _build_inputs(self,batch,t):
-        if self.args.coach_input == "state":
-            inputs = batch["state"][:, t].unsqueeze(1)
-        else:
-            obs = batch["obs"]
-            b,T,na,obs_dim = obs.shape 
-            inputs = obs.reshape(b,T,self.state_dim)[:, t].unsqueeze(1).float()
+        inputs = batch["state"][:, t]
         return inputs
 
     def encode(self, batch,t):
-        inputs = self._build_inputs(batch,t) 
+        inputs = batch["state"][:, t].unsqueeze(1)
         x = self.fc1(inputs).view(-1,self.na, self.args.rnn_hidden_dim)
         att = self.att(x)
         att = F.relu(self.fc2(att), inplace=True).view(-1, self.args.coach_hidden_dim)
         return att
 
     def strategy(self, h, is_inference):
-        # bs, n_agents = h.shape[:2]
-        # shared_h = self.shared_layer(h)
-        # mu, logvar = self.mean(shared_h), self.logvar(shared_h)
-        # mu = mu.view(bs, n_agents, self.ds, -1)
-        # logvar = logvar.view(bs, n_agents, self.ds, -1)
-        # logvar = logvar.clamp_(-10, 0)
 
-        # mix_weights = F.softmax(self.weights(shared_h), dim=-1)  # [bs, n_agents, n_components]
+        shared_h = self.shared_layer(h)
+        mu, logvar = self.mean(shared_h), self.logvar(shared_h)
+        mu = mu.view(-1, self.ds, self.dh)
+        logvar = logvar.view(-1, self.ds, self.dh)
+        logvar = logvar.clamp_(-10, 0)
         
-        # # if is_inference:
-        # #     max_idx = torch.argmax(mix_weights,dim=-1)
-        # #     one_hot = F.one_hot(max_idx, num_classes=self.ds).unsqueeze(-1) 
-        # #     mu = (mu * one_hot).sum(dim=-2)
-        # #     logvar = (logvar * one_hot).sum(dim=-2)
-            
-        # # else:
-        # mu = torch.sum(mu * mix_weights.unsqueeze(-1), dim=-2)
-        # logvar = torch.sum(logvar * mix_weights.unsqueeze(-1), dim=-2)
+        mix_weights = F.softmax(self.weights(shared_h), dim=-1)  # [bs, n_agents, n_components]
 
+        # if is_inference:
+        #     max_idx = torch.argmax(mix_weights,dim=-1)
+        #     one_hot = F.one_hot(max_idx, num_classes=self.ds).unsqueeze(-1) 
+        #     mu = (mu * one_hot).sum(dim=-2)
+        #     logvar = (logvar * one_hot).sum(dim=-2)
+            
+        # else:
+        mix_mu = torch.sum(mu * mix_weights.unsqueeze(-1), dim=-2)
+        mix_logvar = torch.sum(logvar * mix_weights.unsqueeze(-1), dim=-2)
+
+        std = (mix_logvar * 0.5).exp()
+        eps = torch.randn_like(std)
+        z = mix_mu + eps * std
+        # mu, logvar = self.mean(h), self.logvar(h)
+        # logvar = logvar.clamp_(-10, 0)
         # std = (logvar * 0.5).exp()
         # eps = torch.randn_like(std)
         # z = mu + eps * std
-        mu, logvar = self.mean(h), self.logvar(h)
-        logvar = logvar.clamp_(-10, 0)
-        std = (logvar * 0.5).exp()
-        eps = torch.randn_like(std)
-        z = mu + eps * std
-        return z, mu, logvar
+        return z, mix_mu, mix_logvar,mu,logvar
 
     def forward(self, batch,t,isinference=False):
         h = self.encode(batch=batch,t=t) # [batch, n_agents, dh]
-        z_team, mu, logvar = self.strategy(h,isinference)
-        return z_team, mu, logvar
+        z_team, mix_mu, mix_logvar,mu,logvar = self.strategy(h,isinference)
+        return z_team, mix_mu, mix_logvar,mu,logvar
     
-    def LLMInput(self,stratigies):
-        pass
+
 
 
 

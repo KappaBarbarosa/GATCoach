@@ -1,9 +1,8 @@
 # --- QMIX specific parameters ---
 use_vi: True
 has_coach: True
-use_wandb: True
-coach: 'base'
-coach_update_freq: 1
+coach: 'multi_strategy'
+coach_update_freq: 2
 vi_lambda: 0.001
 obs_instead_of_state: False
 # use epsilon greedy action selector
@@ -28,11 +27,11 @@ mac: "n_mac"
 agent: "crnn"
 agent_output_type: q
 
-learner: "nq_coach_learner"
+learner: "nq_coach_learner_st"
 mixer: "qmix"
 
 att_heads: 4
-att_embed_dim: 64
+att_embed_dim: 32
 mixing_embed_dim: 32
 hypernet_embed: 64
 coach_hidden_dim: 64
@@ -41,7 +40,7 @@ lr: 0.001 # Learning rate for agents
 td_lambda: 0.6 # 0.3 for 6h_vs_8z
 optimizer: 'adam'
 q_lambda: False
-coach_input: 'state'
+
 # rnn layer normalization
 use_layer_norm: False
 

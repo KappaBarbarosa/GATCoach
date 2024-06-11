@@ -53,7 +53,7 @@ def run(_run, _config, _log):
             wandb.init(
             # set the wandb project where this run will be logged
             entity="llmcommander2024",
-            project="Coach",
+            project="embeddings",
             name=unique_token,
             config=_config
             )
@@ -91,7 +91,6 @@ def evaluate_sequential(args, runner):
     runner.close_env()
 
 def run_sequential(args, logger):
-
     # Init runner so we can get env info
     runner = r_REGISTRY[args.runner](args=args, logger=logger)
 
@@ -100,6 +99,8 @@ def run_sequential(args, logger):
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
+    args.obs_shape = env_info["obs_shape"]
+
     args.accumulated_episodes = getattr(args, "accumulated_episodes", None)
 
     if getattr(args, 'agent_own_state_size', False):

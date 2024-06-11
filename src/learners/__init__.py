@@ -9,8 +9,8 @@ from .max_q_learner import MAXQLearner
 from .dmaq_qatten_learner import DMAQ_qattenLearner
 from .offpg_learner import OffPGLearner
 from .fmac_learner import FMACLearner
-from.nq_coach_learner import NQ_Coach_Learner
-
+from .nq_coach_learner import NQ_Coach_Learner
+from .nq_coach_learner_st import NQ_Coach_Learner_ST
 REGISTRY = {}
 
 REGISTRY["q_learner"] = QLearner
@@ -20,6 +20,7 @@ REGISTRY["ppo_learner"] = PPOLearner
 REGISTRY["lica_learner"] = LICALearner
 REGISTRY["nq_learner"] = NQLearner
 REGISTRY["nq_coach_learner"] = NQ_Coach_Learner
+REGISTRY["nq_coach_learner_st"] = NQ_Coach_Learner_ST
 REGISTRY["policy_gradient_v2"] = PGLearner_v2
 REGISTRY["max_q_learner"] = MAXQLearner
 REGISTRY["dmaq_qatten_learner"] = DMAQ_qattenLearner

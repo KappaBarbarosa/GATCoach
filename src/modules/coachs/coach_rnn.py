@@ -7,40 +7,44 @@ import torch.nn.functional as F
 
 from modules.layer.self_atten import SelfAttention
 
-class Coach(nn.Module):
+class RNNCoach(nn.Module):
     def __init__(self, args):
-        super(Coach, self).__init__()
+        super(RNNCoach, self).__init__()
         self.args = args
-        self.state_dim = int(np.prod(args.state_shape)) if (self.args.coach_input == "state") else int(np.prod(args.obs_shape))*args.n_agents
-        dh = args.coach_hidden_dim
+        self.state_dim = int(np.prod(args.state_shape)) 
+        
+        dh = args.rnn_hidden_dim
         self.ds = args.n_strategy
         self.na = args.n_agents
-        self.fc1 = nn.Sequential(nn.Linear(self.state_dim, args.hypernet_embed),
-                                        nn.ReLU(inplace=True),
-                                        nn.Linear(args.hypernet_embed, self.na * args.rnn_hidden_dim))
-        self.att = SelfAttention(args.rnn_hidden_dim, args.att_heads, args.att_embed_dim)
-        self.fc2 = nn.Linear(args.att_heads *  args.att_embed_dim, dh)
+        self.att = SelfAttention(self.state_dim, args.att_heads, args.att_embed_dim)
 
+        self.fc = nn.Sequential(nn.Linear(args.att_heads *  args.att_embed_dim, args.hypernet_embed),
+                                        nn.ReLU(inplace=True),
+                                        nn.Linear(args.hypernet_embed, self.na * dh))
+
+        self.rnn = nn.GRUCell(dh, dh)
+        self.fc2 = nn.Linear(dh, dh)
+        
         # policy for continouos team strategy
         self.mean = nn.Linear(dh, dh * self.ds)
         self.logvar = nn.Linear(dh, dh * self.ds)
         self.weights = nn.Linear(dh, self.ds)
+        self.dh = dh
 
     def _build_inputs(self,batch,t):
-        if self.args.coach_input == "state":
-            inputs = batch["state"][:, t].unsqueeze(1)
-        else:
-            obs = batch["obs"]
-            b,T,na,obs_dim = obs.shape 
-            inputs = obs.reshape(b,T,self.state_dim)[:, t].unsqueeze(1).float()
+        inputs = batch["state"][:, t]
         return inputs
-
+    def init_hidden(self,batch_size):
+        self.hidden_state = self.fc[2].weight.new(1, self.dh).zero_()
+        if self.hidden_state is not None:
+            self.hidden_state = self.hidden_state.unsqueeze(0).expand(batch_size, self.na, -1).view(-1,self.dh)  # bav
     def encode(self, batch,t):
-        inputs = self._build_inputs(batch,t) 
-        x = self.fc1(inputs).view(-1,self.na, self.args.rnn_hidden_dim)
-        att = self.att(x)
-        att = F.relu(self.fc2(att), inplace=True).view(-1, self.args.coach_hidden_dim)
-        return att
+        inputs = batch["state"][:, t].unsqueeze(1) ## [batch, 1, state_dim]
+        att = self.att(inputs) ## [batch, 1, att_heads * att_embed_dim]
+        x = self.fc(att).view(-1, self.dh) ## [batch, n_agents, dh]
+        self.hidden_state = self.rnn(x, self.hidden_state) ## [batch, n_agents, dh]
+        h = F.relu(self.fc2(self.hidden_state), inplace=True) ## [batch, n_agents, dh]
+        return h
 
     def strategy(self, h, is_inference):
         # bs, n_agents = h.shape[:2]

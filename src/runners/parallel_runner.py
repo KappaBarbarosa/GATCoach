@@ -4,7 +4,7 @@ from components.episode_buffer import EpisodeBatch
 from multiprocessing import Pipe, Process
 import numpy as np
 import torch as th
-
+import wandb
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines
 # https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
@@ -93,6 +93,8 @@ class ParallelRunner:
         episode_returns = [0 for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
         self.mac.init_hidden(batch_size=self.batch_size)
+        if self.args.has_coach and self.args.coach == "rnn":
+            self.coach.init_hidden(batch_size=self.batch_size)
         terminated = [False for _ in range(self.batch_size)]
         envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
         final_env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
@@ -100,7 +102,10 @@ class ParallelRunner:
         save_probs = getattr(self.args, "save_probs", False)
         while True:
             if self.args.has_coach and self.t % self.args.coach_update_freq == 0:
-                z_team, _, _  = self.coach(self.batch,self.t)
+                if self.args.coach == "multi_strategy":
+                    z_team, _, _, _, _ = self.coach(self.batch,self.t)
+                else :
+                    z_team, _, _  = self.coach(self.batch,self.t)
                 self.mac.agent.set_team_strategy(z_team)
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
@@ -205,16 +210,19 @@ class ParallelRunner:
 
         n_test_runs = max(1, self.args.test_nepisode // self.batch_size) * self.batch_size
         if test_mode and (len(self.test_returns) == n_test_runs):
-            self._log(cur_returns, cur_stats, log_prefix)
+            self._log(cur_returns, cur_stats, log_prefix, self.args.use_wandb)
         elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log(cur_returns, cur_stats, log_prefix)
+            self._log(cur_returns, cur_stats, log_prefix, self.args.use_wandb)
             if hasattr(self.mac.action_selector, "epsilon"):
                 self.logger.log_stat("epsilon", self.mac.action_selector.epsilon, self.t_env)
             self.log_train_stats_t = self.t_env
 
         return self.batch
 
-    def _log(self, returns, stats, prefix):
+    def _log(self, returns, stats, prefix, use_wandb):
+        if use_wandb == False:
+            return
+            
         self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
         self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
         returns.clear()
@@ -222,6 +230,8 @@ class ParallelRunner:
         for k, v in stats.items():
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean" , v/stats["n_episodes"], self.t_env)
+                if  "battle_won" in (prefix + k):
+                    wandb.log({prefix + k + "_mean": v/stats["n_episodes"]}, step=self.t_env)
         stats.clear()
 
 

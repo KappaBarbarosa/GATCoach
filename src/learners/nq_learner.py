@@ -9,7 +9,7 @@ import torch as th
 from torch.optim import RMSprop, Adam
 import numpy as np
 from utils.th_utils import get_parameters_num
-
+import wandb
 class NQLearner:
     def __init__(self, mac, scheme, logger, args):
         self.args = args
@@ -132,13 +132,19 @@ class NQLearner:
 
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat("loss_td", L_td.item(), t_env)
+            wandb.log({"loss_td": L_td.item()}, step=t_env)
             self.logger.log_stat("grad_norm", grad_norm, t_env)
             mask_elems = mask.sum().item()
-            self.logger.log_stat("td_error_abs", (masked_td_error.abs().sum().item()/mask_elems), t_env)
-            self.logger.log_stat("q_taken_mean", (chosen_action_qvals * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
-            self.logger.log_stat("target_mean", (targets * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
+            td_error_abs = masked_td_error.abs().sum().item()/mask_elems
+            q_taken_mean = (chosen_action_qvals * mask).sum().item()/(mask_elems * self.args.n_agents)
+            target_mean = (targets * mask).sum().item()/(mask_elems * self.args.n_agents)
+            self.logger.log_stat("td_error_abs", td_error_abs, t_env)
+            wandb.log({"td_error_abs": td_error_abs}, step=t_env)
+            self.logger.log_stat("q_taken_mean", q_taken_mean, t_env)
+            wandb.log({"q_taken_mean": q_taken_mean}, step=t_env)
+            self.logger.log_stat("target_mean", target_mean, t_env)
+            wandb.log({"target_mean": target_mean}, step=t_env)
             self.log_stats_t = t_env
-            
             # print estimated matrix
             if self.args.env == "one_step_matrix_game":
                 print_matrix_status(batch, self.mixer, mac_out)

@@ -1,5 +1,5 @@
 # --- QMIX specific parameters ---
-
+use_wandb: True
 has_coach: False
 # use epsilon greedy action selector
 action_selector: "epsilon_greedy"

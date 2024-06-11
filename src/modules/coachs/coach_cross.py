@@ -5,20 +5,21 @@ import torch.distributions as D
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.layer.self_atten import SelfAttention
+from modules.layer.cross_atten import CrossAttention
 
-class Coach(nn.Module):
+class Coach_Cross(nn.Module):
     def __init__(self, args):
-        super(Coach, self).__init__()
+        super(Coach_Cross, self).__init__()
         self.args = args
-        self.state_dim = int(np.prod(args.state_shape)) if (self.args.coach_input == "state") else int(np.prod(args.obs_shape))*args.n_agents
+        self.state_dim = int(np.prod(args.state_shape)) 
         dh = args.coach_hidden_dim
         self.ds = args.n_strategy
         self.na = args.n_agents
+        self.embedding = nn.Parameter(torch.randn(self.na, self.args.rnn_hidden_dim))
         self.fc1 = nn.Sequential(nn.Linear(self.state_dim, args.hypernet_embed),
                                         nn.ReLU(inplace=True),
                                         nn.Linear(args.hypernet_embed, self.na * args.rnn_hidden_dim))
-        self.att = SelfAttention(args.rnn_hidden_dim, args.att_heads, args.att_embed_dim)
+        self.att = CrossAttention(args.rnn_hidden_dim, args.att_heads, args.att_embed_dim)
         self.fc2 = nn.Linear(args.att_heads *  args.att_embed_dim, dh)
 
         # policy for continouos team strategy
@@ -27,18 +28,14 @@ class Coach(nn.Module):
         self.weights = nn.Linear(dh, self.ds)
 
     def _build_inputs(self,batch,t):
-        if self.args.coach_input == "state":
-            inputs = batch["state"][:, t].unsqueeze(1)
-        else:
-            obs = batch["obs"]
-            b,T,na,obs_dim = obs.shape 
-            inputs = obs.reshape(b,T,self.state_dim)[:, t].unsqueeze(1).float()
+        inputs = batch["state"][:, t]
         return inputs
 
     def encode(self, batch,t):
-        inputs = self._build_inputs(batch,t) 
+        inputs = batch["state"][:, t].unsqueeze(1)
         x = self.fc1(inputs).view(-1,self.na, self.args.rnn_hidden_dim)
-        att = self.att(x)
+        emb = self.embedding.unsqueeze(0).repeat(x.size(0),1,1)
+        att = self.att(query=x, key_value=emb)
         att = F.relu(self.fc2(att), inplace=True).view(-1, self.args.coach_hidden_dim)
         return att
 
