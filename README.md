@@ -21,9 +21,9 @@ This repository is fine-tuned for StarCraft Multi-agent Challenge (SMAC).
 ## Evaluation
 
 ### 3s vs 5z
-![alt text](img1/image-2.png)
-### 5m vs 6m
 ![alt text](img1/image.png)
+### 5m vs 6m
+![alt text](img1/image-2.png)
 ### 8m vs 9m
 ![alt text](img1/image-1.png)
 
